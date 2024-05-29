@@ -2,7 +2,7 @@ import request from 'supertest';
 
 import app from '../src/app';
 
-describe('GET /api/v1', () => {
+describe('GET /routes/v1', () => {
   it('responds with a json message', (done) => {
     request(app)
       .get('/api/v1')
@@ -14,7 +14,7 @@ describe('GET /api/v1', () => {
   });
 });
 
-describe('GET /api/v1/emojis', () => {
+describe('GET /routes/v1/emojis', () => {
   it('responds with a json message', (done) => {
     request(app)
       .get('/api/v1/emojis')
