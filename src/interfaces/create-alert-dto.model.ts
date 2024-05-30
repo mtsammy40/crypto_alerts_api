@@ -1,6 +1,6 @@
-import { NotificationChannel } from './alert';
+import { NotificationChannel } from './alert.model';
 
-export default interface CreateAlertDto {
+export default interface CreateAlertDtoModel {
   pair: string;
   type: 'gt_price'
   price: {
@@ -10,5 +10,6 @@ export default interface CreateAlertDto {
   notification: {
     channel: NotificationChannel
     address: string;
+    subscriber_id: string;
   },
 }

@@ -1,6 +1,6 @@
 import {ObjectId} from "mongodb";
 
-export default interface Alert {
+export default interface AlertModel {
   _id?: ObjectId | undefined;
   pair: string;
   type: 'gt_price'
@@ -8,10 +8,12 @@ export default interface Alert {
   price: {
     current?: number;
     value: number;
+    at_trigger?: number;
   }
   notification: {
     channel: NotificationChannel
     address: string;
+    subscriber_id: string;
   },
   triggerInfo: {
     last_triggered_at: string | null;

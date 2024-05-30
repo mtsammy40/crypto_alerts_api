@@ -1,5 +1,5 @@
 import express from 'express';
-import CreateAlertDto from '../interfaces/CreateAlertDto';
+import CreateAlertDtoModel from '../interfaces/create-alert-dto.model';
 import AlertsService from '../services/alerts.service';
 
 const alertService = new AlertsService();
@@ -15,11 +15,11 @@ router.get<{}, AlertsResponse>('/', (req, res) => {
   res.json({ content: [] });
 });
 
-router.post<CreateAlertDto, {}>('/', (req, res) => {
+router.post<CreateAlertDtoModel, {}>('/', (req, res) => {
   console.log('POST /routes/v1/alerts', req.body);
   alertService.create(req.body)
     .then(() => {
-      console.log('Alert created');
+      console.log('AlertModel created');
       res.status(201).end();
     })
     .catch((e) => {

@@ -1,12 +1,12 @@
 import express from 'express';
 
-import MessageResponse from '../interfaces/MessageResponse';
+import MessageResponseModel from '../interfaces/message-response.model';
 import emojis from './emojis';
 import alerts from './alerts';
 
 const router = express.Router();
 
-router.get<{}, MessageResponse>('/', (req, res) => {
+router.get<{}, MessageResponseModel>('/', (req, res) => {
   res.json({
     message: 'API - 👋🌎🌍🌏',
   });

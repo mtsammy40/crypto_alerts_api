@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 import {randomInt} from "node:crypto";
-import Alert from "../interfaces/alert";
+import AlertModel from "../interfaces/alert.model";
 import MarkPriceUpdate from "../interfaces/mark-price-update.model";
 import RedisConfig from "../config/redis.config";
 import Constants from "../constants/constants";
@@ -19,7 +19,7 @@ export default class PriceListenerWorker {
 
     _activeSubscriptions: string[] = [];
 
-    _alerts: Map<string, Alert[]> = new Map<string, any>();
+    _alerts: Map<string, AlertModel[]> = new Map<string, any>();
 
     _pendingResponses = new Map<string, any>();
 
@@ -37,6 +37,13 @@ export default class PriceListenerWorker {
             .catch(console.error);
     }
 
+    static getInstance(): PriceListenerWorker {
+        if (!PriceListenerWorker._instance) {
+            PriceListenerWorker._instance = new PriceListenerWorker();
+        }
+        return PriceListenerWorker._instance;
+    }
+
     async startSubscribers() {
         console.log('Starting price-watcher-worker subscribers');
         (await this._subscriber).subscribe(Constants.channels.add_alert_listener, (message) => this.addListener(message))
@@ -48,13 +55,6 @@ export default class PriceListenerWorker {
             return;
         }
         await this.monitorPrices(symbols);
-    }
-
-    static getInstance(): PriceListenerWorker {
-        if (!PriceListenerWorker._instance) {
-            PriceListenerWorker._instance = new PriceListenerWorker();
-        }
-        return PriceListenerWorker._instance;
     }
 
     private async monitorPrices(symbols: string[]): Promise<void> {
@@ -120,9 +120,23 @@ export default class PriceListenerWorker {
         this._pendingResponses.set(ref.toString(), payload);
     }
 
+    private unsubscribe(pairs: string[]) {
+        console.log('Unsubscribing from pairs: ', pairs.join(', '));
+        const params = pairs
+            .map(pair => `${pair}@markPrice`);
+        const ref = randomInt(10000, 99999);
+        const payload = {
+            "method": "UNSUBSCRIBE",
+            "params": params,
+            "id": ref
+        }
+        this._ws.send(JSON.stringify(payload));
+        this._pendingResponses.set(ref.toString(), payload);
+    }
+
     addListener(message: string) {
-        const alert: Alert = JSON.parse(message);
-        console.log(`Adding alert ${alert._id}  to listener `, alert);
+        const alert: AlertModel = JSON.parse(message);
+        console.log(`Adding alert ${alert._id} to listener `, alert);
         this.subscribe([alert.pair]);
         const alertsForPair = this._alerts.get(alert.pair) || [];
         alertsForPair.push(alert);
@@ -136,6 +150,9 @@ export default class PriceListenerWorker {
             switch (pendingResponse.method) {
                 case 'SUBSCRIBE':
                     this.handleSubscriptionResponse(message);
+                    break;
+                case 'UNSUBSCRIBE':
+                    this.handleUnSubscribeResponse(message);
                     break;
                 default:
                     console.log('Unhandled pending response: ', message);
@@ -153,6 +170,16 @@ export default class PriceListenerWorker {
         }
     }
 
+    private handleUnSubscribeResponse(message: any): void {
+        if (message.result) {
+            const symbols = this._pendingResponses.get(message.id)?.params.map((pair: string) => {
+                return pair.split('@')[0];
+            });
+            const activeSubscriptions = this._activeSubscriptions.filter(pair => !symbols.includes(pair));
+            this._activeSubscriptions = [...activeSubscriptions];
+        }
+    }
+
     processPriceUpdate(markPriceUpdate: MarkPriceUpdate) {
         const pair = markPriceUpdate.data.s.toLowerCase();
         const price = markPriceUpdate.data.p;
@@ -166,7 +193,8 @@ export default class PriceListenerWorker {
             switch (alert.type) {
                 case 'gt_price':
                     if (Number(price) >= alert.price.value) {
-                        this.triggerAlert(alert)
+                        this.evictFromListener(alert);
+                        this.triggerAlert(alert, price)
                             .then(() => console.log(`Alert ${alert._id} triggered.`))
                             .catch(console.error)
                     }
@@ -177,21 +205,37 @@ export default class PriceListenerWorker {
         });
     }
 
-    async triggerAlert(alert: Alert) {
-        console.log('Alert triggering : ', alert);
+    evictFromListener(alert: AlertModel) {
+        const alertsForPair = this._alerts.get(alert.pair) || [];
+        const index = alertsForPair.findIndex(a => a._id === alert._id);
+        if (index > -1) {
+            alertsForPair.splice(index, 1);
+            this._alerts.set(alert.pair, [...alertsForPair]);
+        }
+
+        // if no other alerts for pair, unsubscribe
+        if (!alertsForPair.length) {
+            this.unsubscribe([alert.pair]);
+            this._alerts.delete(alert.pair);
+        }
+    }
+
+    async triggerAlert(alert: AlertModel, triggerPrice: string) {
+        console.log('AlertModel triggering : ', alert);
         if (!alert.triggerInfo.first_triggered_at) {
-            alert.triggerInfo.last_triggered_at = new Date().toISOString();
+            alert.triggerInfo.first_triggered_at = new Date().toISOString();
         }
         alert.triggerInfo.last_triggered_at = new Date().toISOString();
+        alert.price.at_trigger = Number(triggerPrice);
 
         // promise-then necessary to ensure they don't wait for each other.
         (await this._publisher)
             .publish(Constants.channels.pending_notifications, JSON.stringify(alert))
-            .then(() => console.log('Alert sent to notification service'))
+            .then(() => console.log('AlertModel sent to notification service'))
             .catch(console.error);
         (await this._publisher)
             .publish(Constants.channels.update_alert_triggered, JSON.stringify(alert))
-            .then(() => console.log('Alert update sent for update'))
+            .then(() => console.log('AlertModel update sent for update'))
             .catch(console.error);
     }
 }

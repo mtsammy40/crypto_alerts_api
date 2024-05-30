@@ -8,8 +8,9 @@ export default {
         price: {
             type: 'object',
             properties: {
-                currency: {type: 'integer'},
-                value: {type: 'integer'},
+                currency: {type: 'float'},
+                value: {type: 'float'},
+                at_trigger: {type: 'float'},
             },
         },
         notification: {
@@ -17,6 +18,7 @@ export default {
             properties: {
                 channel: {type: 'string', enum: ['email']},
                 address: {type: 'string'},
+                subscriber_id: {type: 'string'},
             },
         },
         created_at: { type: 'string', nullable: false },

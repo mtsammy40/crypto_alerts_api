@@ -1,7 +1,8 @@
 import DbConfig from '../config/db.config';
-import Alert from '../interfaces/alert';
+import AlertModel from '../interfaces/alert.model';
 import Ajv from "ajv";
 import AppError from "../errors/app.error";
+import {ObjectId} from "mongodb";
 
 export default class AlertRepository {
     _collectionName = 'alerts';
@@ -70,7 +71,7 @@ export default class AlertRepository {
         }
     }
 
-    async insert(alert: Alert) {
+    async insert(alert: AlertModel) {
         if (!this.validate(alert)) {
             console.log('Invalid alert schema: ', this.validate.errors);
             throw new AppError('Invalid alert schema', 400);
@@ -85,15 +86,17 @@ export default class AlertRepository {
         }
     }
 
-    async update(alert: Alert) {
+    async update(alert: AlertModel) {
         if (!this.validate(alert)) {
             console.log('Invalid alert schema: ', this.validate.errors);
             throw new AppError('Invalid alert schema', 400);
         }
+        const id = new ObjectId(alert._id);
+        delete alert._id;
         try {
             return await (await this.client())
                 .collection(this._collectionName)
-                .updateOne({_id: alert._id}, {$set: alert});
+                .updateOne({_id: id}, {$set: alert});
         } catch (e) {
             console.error('Error updating alert', e);
             throw new AppError('Error updating alert');

@@ -1,5 +1,5 @@
-import CreateAlertDto from '../interfaces/CreateAlertDto';
-import Alert from '../interfaces/alert';
+import CreateAlertDtoModel from '../interfaces/create-alert-dto.model';
+import AlertModel from '../interfaces/alert.model';
 import AlertRepository from '../repository/alert-repository';
 import Ajv from "ajv";
 import create_alert_dto_schema from "../schemas/create-alert-dto.schema";
@@ -16,6 +16,7 @@ export default class AlertsService {
     _subscriber = RedisConfig.getInstance().getSubscriber();
 
     constructor() {
+        // todo - move this to a worker
         this.startSubscribers()
             .then(() => console.log('AlertsService subscribers started successfully'))
             .catch(console.error);
@@ -23,16 +24,16 @@ export default class AlertsService {
 
     async startSubscribers() {
         console.log('Starting alert-service subscribers');
-        (await this._subscriber).subscribe(Constants.channels.update_alert_triggered, this.updateAsTriggered)
+        (await this._subscriber).subscribe(Constants.channels.update_alert_triggered, message => this.updateAsTriggered(message))
     }
 
 
-    async create(createAlertDto: CreateAlertDto) {
+    async create(createAlertDto: CreateAlertDtoModel) {
         if (!this._validator(createAlertDto)) {
             console.log('Invalid alert schema: ', this._validator.errors);
             throw new Error('Invalid alert schema');
         }
-        const alert: Alert = {
+        const alert: AlertModel = {
             ...createAlertDto,
             status: 'active',
             triggerInfo: {
@@ -47,9 +48,17 @@ export default class AlertsService {
     }
 
     async updateAsTriggered(message: string) {
-        const alert: Alert = JSON.parse(message);
+        console.debug('Updating alert as triggered ', message);
+        const alert: AlertModel = JSON.parse(message);
         alert.status = 'triggered';
-        await this._alertsRepository.update(alert);
+        console.log('Updating alert as triggered (updated)', alert._id);
+        try {
+            const updateResult = await this._alertsRepository.update(alert);
+            console.log(`Alert update result `, updateResult);
+            console.log(`Alert ${alert._id} updated as triggered `, alert);
+        } catch (e) {
+            console.error(`Error updating alert ${alert._id} as triggered `, e);
+        }
     }
 }
 
