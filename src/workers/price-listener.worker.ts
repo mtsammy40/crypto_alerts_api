@@ -87,7 +87,7 @@ export default class PriceListenerWorker {
             this._ws.on('close', () => {
                 console.log('Connection closed. Reconnecting...');
                 this._isMonitoring = false;
-                this.monitorPrices(symbols)
+                this.startMonitoring(symbols)
                     .then(() => console.log('Reconnected'))
                     .catch(console.error);
             });
