@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  crypto-alerts-api:
+    image: mtsammy40/crypto_alerts_api:latest
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      MONGO_URI: ${MONGO_URI}
+      REDIS_URI: ${REDIS_URI}
+      NOVU_API_KEY: ${NOVU_API_KEY}
+      NOVU_APP_ID: ${NOVU_APP_ID}
+      NOVU_ENVIRONMENT_ID: ${NOVU_ENVIRONMENT_ID}
+    ports:
+      - '5001:5001'
