@@ -51,12 +51,24 @@ export default class AlertRepository {
         try {
             return await (await this.client())
                 .collection('alerts')
-                .find().toArray();
+                .find()
+                .map(doc => {
+                    return {
+                        _id: doc._id,
+                        pair: doc.pair,
+                        type: doc.type,
+                        status: doc.status,
+                        price: doc.price,
+                        notification: doc.notification,
+                        triggerInfo: doc.triggerInfo,
+                        created_at: doc.created_at,
+                    } as AlertModel;
+                })
+                .toArray();
         } catch (e) {
             console.error('Error listing alerts', e);
             throw new AppError('Error listing alerts');
         }
-
     }
 
     async listActiveAlertSymbols() {
@@ -100,6 +112,17 @@ export default class AlertRepository {
         } catch (e) {
             console.error('Error updating alert', e);
             throw new AppError('Error updating alert');
+        }
+    }
+
+    async delete(id: string) {
+        try {
+            return await (await this.client())
+                .collection(this._collectionName)
+                .findOneAndDelete({_id: new ObjectId(id)});
+        } catch (e) {
+            console.error('Error deleting alert', e);
+            throw new AppError('Error deleting alert');
         }
     }
 }

@@ -3,7 +3,7 @@ import {ObjectId} from "mongodb";
 export default interface AlertModel {
   _id?: ObjectId | undefined;
   pair: string;
-  type: 'gt_price'
+  type: 'gt_price' | 'lt_price';
   status: 'active' | 'triggered' | 'cancelled';
   price: {
     current?: number;

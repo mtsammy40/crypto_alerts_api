@@ -4,6 +4,7 @@ import AlertModel from "../interfaces/alert.model";
 import MarkPriceUpdate from "../interfaces/mark-price-update.model";
 import RedisConfig from "../config/redis.config";
 import Constants from "../constants/constants";
+import Alerts from "../routes/alerts";
 
 
 export default class PriceListenerWorker {
@@ -46,7 +47,8 @@ export default class PriceListenerWorker {
 
     async startSubscribers() {
         console.log('Starting price-watcher-worker subscribers');
-        (await this._subscriber).subscribe(Constants.channels.add_alert_listener, (message) => this.addListener(message))
+        (await this._subscriber).subscribe(Constants.channels.add_alert_listener, (message) => this.addListener(message));
+        (await this._subscriber).subscribe(Constants.channels.delete_alert_listener, (message) => this.removeListener(message))
     }
 
     async startMonitoring(symbols: string[]) {
@@ -79,7 +81,7 @@ export default class PriceListenerWorker {
                 if (message.id) {
                     this.handlePendingResponse(message);
                 } else if (message.stream) {
-                    console.log('Stream message: ', message);
+                    // console.info('Stream message: ', message);
                     this.processPriceUpdate(message);
                 }
             });
@@ -120,6 +122,13 @@ export default class PriceListenerWorker {
         this._pendingResponses.set(ref.toString(), payload);
     }
 
+    private unsubscribeIfNoAlerts(pair: string) {
+        const alertsForPair = this._alerts.get(pair);
+        if (!alertsForPair || !alertsForPair.length) {
+            this.unsubscribe([pair]);
+        }
+    }
+
     private unsubscribe(pairs: string[]) {
         console.log('Unsubscribing from pairs: ', pairs.join(', '));
         const params = pairs
@@ -140,6 +149,15 @@ export default class PriceListenerWorker {
         this.subscribe([alert.pair]);
         const alertsForPair = this._alerts.get(alert.pair) || [];
         alertsForPair.push(alert);
+        this._alerts.set(alert.pair, [...alertsForPair]);
+    }
+
+    removeListener(message: string) {
+        const alert: AlertModel = JSON.parse(message);
+        console.log(`Removing alert ${alert._id} from listener `);
+        this.unsubscribeIfNoAlerts(alert.pair);
+        let alertsForPair = this._alerts.get(alert.pair) || [];
+        alertsForPair = [...alertsForPair.filter(a => a._id !== alert._id)];
         this._alerts.set(alert.pair, [...alertsForPair]);
     }
 
@@ -193,6 +211,14 @@ export default class PriceListenerWorker {
             switch (alert.type) {
                 case 'gt_price':
                     if (Number(price) >= alert.price.value) {
+                        this.evictFromListener(alert);
+                        this.triggerAlert(alert, price)
+                            .then(() => console.log(`Alert ${alert._id} triggered.`))
+                            .catch(console.error)
+                    }
+                    break;
+                case 'lt_price':
+                    if (Number(price) <= alert.price.value) {
                         this.evictFromListener(alert);
                         this.triggerAlert(alert, price)
                             .then(() => console.log(`Alert ${alert._id} triggered.`))

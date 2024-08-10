@@ -5,6 +5,7 @@ import Ajv from "ajv";
 import create_alert_dto_schema from "../schemas/create-alert-dto.schema";
 import RedisConfig from "../config/redis.config";
 import Constants from "../constants/constants";
+import {WithId} from "mongodb";
 
 export default class AlertsService {
     _alertsRepository = new AlertRepository();
@@ -45,6 +46,37 @@ export default class AlertsService {
         await this._alertsRepository.insert(alert);
 
         (await this._publisher).publish(Constants.channels.add_alert_listener, JSON.stringify(alert));
+    }
+
+    async list(): Promise<any[]> {
+        return new Promise(async (resolve, reject) => {
+            this._alertsRepository.list()
+                .then((alerts) => {
+                    if(alerts) {
+                        resolve(alerts);
+                    } else {
+                        reject('No alerts found');
+                    }
+                })
+                .catch((e) => reject(e));
+        });
+    }
+
+    async delete(id: string) {
+        this._alertsRepository
+            .delete(id)
+            .then(async (doc) => {
+                if(!doc) {
+                    console.error('Alert not found');
+                    throw new Error('Alert not found');
+                }
+                console.log('Alert deleted ', doc._id);
+                (await this._publisher).publish(Constants.channels.delete_alert_listener, JSON.stringify(doc));
+            })
+            .catch((e: any) => {
+                console.error('Error deleting alert', e);
+                throw new Error('Error deleting alert');
+            });
     }
 
     async updateAsTriggered(message: string) {

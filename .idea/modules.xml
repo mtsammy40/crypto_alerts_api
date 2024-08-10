@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/crypto_alerts_api.iml" filepath="$PROJECT_DIR$/.idea/crypto_alerts_api.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../crypto_alerts_ui/.idea/crypto_alerts_ui.iml" filepath="$PROJECT_DIR$/../crypto_alerts_ui/.idea/crypto_alerts_ui.iml" />
     </modules>
   </component>
 </project>
