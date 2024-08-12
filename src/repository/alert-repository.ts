@@ -3,11 +3,10 @@ import AlertModel from '../interfaces/alert.model';
 import Ajv from "ajv";
 import AppError from "../errors/app.error";
 import {ObjectId} from "mongodb";
+import BaseRepository from "./BaseRepository";
 
-export default class AlertRepository {
+export default class AlertRepository extends BaseRepository {
     _collectionName = 'alerts';
-
-    _db = DbConfig.getInstance();
 
     validate = new Ajv().compile({
         type: 'object',
@@ -34,23 +33,11 @@ export default class AlertRepository {
         },
     });
 
-    private async client() {
-        try {
-            const client =  await this._db.dbClient();
-            if (!client) {
-                throw new Error('DB Client not found');
-            }
-            return client;
-        } catch (e) {
-            console.error('Error connecting to DB', e);
-            throw new AppError('Error connecting to DB');
-        }
-    }
 
     async list() {
         try {
             return await (await this.client())
-                .collection('alerts')
+                .collection(this._collectionName)
                 .find()
                 .map(doc => {
                     return {
@@ -74,7 +61,7 @@ export default class AlertRepository {
     async listActiveAlertSymbols() {
         try {
             return await (await this.client())
-                .collection('alerts')
+                .collection(this._collectionName)
                 .find({'status': 'active'})
                 .toArray();
         } catch (e) {
