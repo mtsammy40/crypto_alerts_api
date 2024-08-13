@@ -4,34 +4,12 @@ import Ajv from "ajv";
 import AppError from "../errors/app.error";
 import {ObjectId} from "mongodb";
 import BaseRepository from "./BaseRepository";
+import alertSchema from "../schemas/alert.schema";
 
 export default class AlertRepository extends BaseRepository {
     _collectionName = 'alerts';
 
-    validate = new Ajv().compile({
-        type: 'object',
-        properties: {
-            _id: {type: 'string'},
-            pair: {type: 'string'},
-            type: {type: 'string', enum: ['gt_price']},
-            price: {
-                type: 'object',
-                properties: {
-                    currency: {type: 'integer'},
-                    value: {type: 'integer'},
-                },
-            },
-            notification: {
-                type: 'object',
-                properties: {
-                    channel: {type: 'string', enum: ['email']},
-                    address: {type: 'string'},
-                },
-            },
-            // required: ['pair','type','price','notification'],
-            additionalProperties: false,
-        },
-    });
+    validate = new Ajv().compile(alertSchema);
 
 
     async list() {

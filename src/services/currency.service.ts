@@ -27,7 +27,8 @@ export default class CurrencyService {
                         pair: symbol.symbol,
                         displayName: symbol.baseAsset,
                     };
-                });
+                })
+                .sort((a: { displayName: string; }, b: { displayName: string; }) => a.displayName.localeCompare(b.displayName));
         } catch (e) {
             console.error('Error refreshing currencies', e);
             throw new Error('Error refreshing currencies');

@@ -2,12 +2,12 @@ export default {
     type: 'object',
     properties: {
         pair: {type: 'string'},
-        type: {type: 'string', enum: ['gt_price']},
+        type: {type: 'string', enum: ['gt_price', 'lt_price']},
         price: {
             type: 'object',
             properties: {
-                current: {type: 'integer'},
-                value: {type: 'integer'},
+                current: {type: 'number'},
+                value: {type: 'number'},
             },
         },
         notification: {

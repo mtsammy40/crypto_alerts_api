@@ -4,13 +4,13 @@ export default {
         id: { type: 'string', nullable: true },
         pair: { type: 'string' },
         status: { type: 'string', enum: ['active', 'triggered', 'cancelled'] },
-        type: { type: 'string', enum: ['gt_price'] },
+        type: { type: 'string', enum: ['gt_price', 'lt_price'] },
         price: {
             type: 'object',
             properties: {
-                currency: {type: 'float'},
-                value: {type: 'float'},
-                at_trigger: {type: 'float'},
+                currency: {type: 'number'},
+                value: {type: 'number'},
+                at_trigger: {type: 'number'},
             },
         },
         notification: {
